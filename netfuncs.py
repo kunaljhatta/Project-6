@@ -15,9 +15,12 @@ def ipv4_to_value(ipv4_addr):
     ipv4_addr: "1.2.3.4"
     return:    0x01020304 0b00000001000000100000001100000100 16909060
     """
+    split_num = ipv4_addr.split('.')
+    sum = 0
+    for i, num in enumerate(split_num):
+        sum += int(num) << 8*(len(split_num)-(i+1))
+    return sum
 
-    # TODO -- write me!
-    pass
 
 def value_to_ipv4(addr):
     """
@@ -34,9 +37,7 @@ def value_to_ipv4(addr):
     addr:   0x01020304 0b00000001000000100000001100000100 16909060
     return: "1.2.3.4"
     """
-
-    # TODO -- write me!
-    pass
+    return '.'.join([str((int(addr) >> 8*i) % 256)  for i in [3,2,1,0]])
 
 def get_subnet_mask_value(slash):
     """
@@ -55,8 +56,7 @@ def get_subnet_mask_value(slash):
     return: 0xfffffe00 0b11111111111111111111111000000000 4294966784
     """
 
-    # TODO -- write me!
-    pass
+    return (0xffffffff << (32 - int(slash.split("/")[1]))) & 0xffffffff
 
 def ips_same_subnet(ip1, ip2, slash):
     """
@@ -82,9 +82,13 @@ def ips_same_subnet(ip1, ip2, slash):
     slash:  "/16"
     return: False
     """
-
-    # TODO -- write me!
-    pass
+    ip1_value = ipv4_to_value(ip1)
+    ip2_value = ipv4_to_value(ip2)
+    mask = get_subnet_mask_value(slash)
+    if (ip1_value & mask) == (ip2_value & mask):
+        return True
+    else:
+        return False
 
 def get_network(ip_value, netmask):
     """
@@ -97,8 +101,7 @@ def get_network(ip_value, netmask):
     return:   0x01020300
     """
 
-    # TODO -- write me!
-    pass
+    return ip_value & netmask
 
 def find_router_for_ip(routers, ip):
     """
@@ -139,20 +142,37 @@ def find_router_for_ip(routers, ip):
     return: None
     """
 
-    # TODO -- write me!
-    pass
+    for router_ip, router in routers.items():
+        if ips_same_subnet(ip, router_ip, router["netmask"]):
+            return router_ip
+    return None
 
 # Uncomment this code to have it run instead of the real main.
 # Be sure to comment it back out before you submit!
 """
 def my_tests():
+    # Add custom test code here
     print("-------------------------------------")
     print("This is the result of my custom tests")
     print("-------------------------------------")
 
-    print(x)
-
-    # Add custom test code here
+    # print(x)
+    print(ipv4_to_value("198.51.100.10"))
+    print(value_to_ipv4("16909060"))
+    print(get_subnet_mask_value("/16"))
+    print(ips_same_subnet("10.23.121.17","10.23.121.225","/23"))
+    print(ips_same_subnet("10.23.230.22","10.24.121.225","/16"))
+    print(get_network(0x01020304, 0xffffff00))
+    routers = {
+            "1.2.3.1": {
+                "netmask": "/24"
+            },
+            "1.2.4.1": {
+                "netmask": "/24"
+            }
+        }
+    ip= "1.2.3.5"
+    print(find_router_for_ip(routers, ip))
 """
 
 ## -------------------------------------------
@@ -211,7 +231,7 @@ def print_ip_routers(routers, src_dest_pairs):
     router_host_map = {}
 
     for ip in all_ips:
-        router = find_router_for_ip(routers, ip)
+        router = str(find_router_for_ip(routers, ip))
         
         if router not in router_host_map:
             router_host_map[router] = []
